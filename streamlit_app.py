@@ -60,23 +60,44 @@ def get_radius(nr_dr, nr_ul, lte_dl, lte_ul):
     traffic = nr_dr + nr_ul + lte_dl + lte_ul
     return max(5, min(traffic / 30, 30))  # 최소 5, 최대 30
 
-# 팝업 텍스트 생성 함수
+
+# 팝업 텍스트 생성 함수 (CSS 스타일 더 축소)
 def create_popup_text(row):
     def safe_format(value):
         return f"{round(value, 2):,}" if pd.notnull(value) else 'N/A'
 
+    # 폰트 크기 및 셀 간 간격을 최소화하여 테이블 높이를 줄임
     popup_text = (
-        f"<table style='font-size: 11px; width: 100%; border: 1px solid black; border-collapse: collapse;'>"
-        f"<tr style='background-color: #f2f2f2;'><th style='border: 1px solid black;'>구분</th><th style='border: 1px solid black;'>항목</th><th style='border: 1px solid black;'>값</th></tr>"
-        f"<tr><td style='border: 1px solid black;' rowspan='2'>5G</td><td style='border: 1px solid black;'>DL [GB]</td><td style='border: 1px solid black;'>{safe_format(row['nr_dr'])}</td></tr>"
-        f"<tr><td style='border: 1px solid black;'>UL [GB]</td><td style='border: 1px solid black;'>{safe_format(row['nr_ul'])}</td></tr>"
-        f"<tr><td style='border: 1px solid black;' rowspan='2'>LTE</td><td style='border: 1px solid black;'>DL [GB]</td><td style='border: 1px solid black;'>{safe_format(row['lte_dl'])}</td></tr>"
-        f"<tr><td style='border: 1px solid black;'>UL [GB]</td><td style='border: 1px solid black;'>{safe_format(row['lte_ul'])}</td></tr>"
-        f"<tr style='background-color: #f2f2f2;'><td style='border: 1px solid black;' rowspan='2'>소계</td><td style='border: 1px solid black;'>5G [GB]</td><td style='border: 1px solid black;'>{safe_format(row['nr_dr'] + row['nr_ul'])}</td></tr>"
-        f"<tr style='background-color: #f2f2f2;'><td style='border: 1px solid black;'>LTE [GB]</td><td style='border: 1px solid black;'>{safe_format(row['lte_dl'] + row['lte_ul'])}</td></tr>"
+        f"<table style='font-size: 11px; width: 100%; max-width: 250px; border: 1px solid black; border-collapse: collapse; margin: 0; padding: 0;'>"
+        f"<tr style='background-color: #f2f2f2;'><th style='border: 1px solid black; padding: 1px;'>구분</th><th style='border: 1px solid black; padding: 1px;'>항목</th><th style='border: 1px solid black; padding: 1px;'>값</th></tr>"
+        f"<tr><td style='border: 1px solid black; padding: 1px;' rowspan='2'>5G</td><td style='border: 1px solid black; padding: 1px;'>DL [GB]</td><td style='border: 1px solid black; padding: 1px;'>{safe_format(row['nr_dr'])}</td></tr>"
+        f"<tr><td style='border: 1px solid black; padding: 1px;'>UL [GB]</td><td style='border: 1px solid black; padding: 1px;'>{safe_format(row['nr_ul'])}</td></tr>"
+        f"<tr><td style='border: 1px solid black; padding: 1px;' rowspan='2'>LTE</td><td style='border: 1px solid black; padding: 1px;'>DL [GB]</td><td style='border: 1px solid black; padding: 1px;'>{safe_format(row['lte_dl'])}</td></tr>"
+        f"<tr><td style='border: 1px solid black; padding: 1px;'>UL [GB]</td><td style='border: 1px solid black; padding: 1px;'>{safe_format(row['lte_ul'])}</td></tr>"
+        f"<tr style='background-color: #f2f2f2;'><td style='border: 1px solid black; padding: 1px;' rowspan='2'>소계</td><td style='border: 1px solid black; padding: 1px;'>5G [GB]</td><td style='border: 1px solid black; padding: 1px;'>{safe_format(row['nr_dr'] + row['nr_ul'])}</td></tr>"
+        f"<tr style='background-color: #f2f2f2;'><td style='border: 1px solid black; padding: 1px;'>LTE [GB]</td><td style='border: 1px solid black; padding: 1px;'>{safe_format(row['lte_dl'] + row['lte_ul'])}</td></tr>"
         f"</table>"
     )
     return popup_text
+
+# 팝업을 표시할 때 IFrame 크기 조정 (세로 크기를 더욱 줄임)
+def create_marker_with_popup(row):
+    popup_text = create_popup_text(row)
+    
+    # IFrame의 세로 크기를 더 줄임
+    iframe = folium.IFrame(popup_text, width=240, height=50)  # 세로 크기를 더 줄임
+    popup = folium.Popup(iframe, max_width=240, max_height=50)  # 팝업 최대 크기 설정
+    marker = folium.CircleMarker(
+        location=[row['bld_lat'], row['bld_lon']],
+        radius=get_radius(row['nr_dr'], row['nr_ul'], row['lte_dl'], row['lte_ul']),
+        color=get_color(row['nr_dr'], row['nr_ul'], row['lte_dl'], row['lte_ul']),
+        fill=True,
+        fill_color=get_color(row['nr_dr'], row['nr_ul'], row['lte_dl'], row['lte_ul']),
+        fill_opacity=0.7,
+        popup=popup
+    )
+    return marker
+
 
 # 달성도 테이블 생성 및 지도에 표시하는 함수
 def add_achievement_table_to_map(m, df_additional, selected_dates, selected_clusters):
