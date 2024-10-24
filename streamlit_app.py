@@ -114,6 +114,9 @@ def create_popup_text(row):
         f"<tr style='background-color: #f2f2f2;'><td style='border: 1px solid black; padding: 1px;' rowspan='2'>소계</td><td style='border: 1px solid black; padding: 1px;'>5G [GB]</td><td style='border: 1px solid black; padding: 1px;'>{safe_format(row['nr_dr'] + row['nr_ul'])}</td></tr>"
         f"<tr style='background-color: #f2f2f2;'><td style='border: 1px solid black; padding: 1px;'>LTE [GB]</td><td style='border: 1px solid black; padding: 1px;'>{safe_format(row['lte_dl'] + row['lte_ul'])}</td></tr>"
         f"</table>"
+        f"<div style='margin-top: 5px; font-size: 11px;'>"
+        f"<strong>주소:</strong> {row['bld_address']}"
+        f"</div>"
         f"</div>"  # div 닫기
     )
     return popup_text
