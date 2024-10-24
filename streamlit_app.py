@@ -13,6 +13,16 @@ import matplotlib.font_manager as fm
 import time
 
 
+# 제목에 이모지 추가
+emoji_path = './emoji.png'  # 이모지 이미지 파일 경로
+
+def get_image_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
+    return encoded_string
+
+emoji_base64 = get_image_base64(emoji_path)
+
 # CSS 스타일 추가: 스크롤바 숨기기
 hide_scrollbar_style = """
     <style>
@@ -384,8 +394,13 @@ def run_gpt_style():
     # 폰트 설정
     configure_font()
 
-    # 메인 제목 표시
-    st.markdown("<h3 style='text-align: center; font-size:24px;'>AI기반 밀집Cluster 품질 센싱 및 트래픽 자동분석</h3>", unsafe_allow_html=True)
+    # 제목을 이모지와 함께 표시
+    st.markdown(f"""
+        <h3 style='text-align: center; font-size:24px;'>
+        <img src="data:image/png;base64,{emoji_base64}" alt="emoji" style="vertical-align:middle; width:30px; height:30px;">
+        AI기반 밀집Cluster 품질 센싱 및 트래픽 자동분석
+        </h3>
+    """, unsafe_allow_html=True)
 
     # 파일 경로 설정
     file_path = './sample_dna 0901_0930.csv'
