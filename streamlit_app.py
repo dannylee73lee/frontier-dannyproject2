@@ -12,6 +12,24 @@ import matplotlib.dates as mdates
 import matplotlib.font_manager as fm
 import time
 
+
+# CSS 스타일 추가: 스크롤바 숨기기
+hide_scrollbar_style = """
+    <style>
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .element-container {
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    }
+    .element-container::-webkit-scrollbar {
+        display: none; /* Chrome, Safari and Opera */
+    }
+    </style>
+"""
+
+# Streamlit 앱에 스타일 적용
+st.markdown(hide_scrollbar_style, unsafe_allow_html=True)
+
 # 폰트 설정 함수
 def configure_font():
     font_path = './NanumGothic.ttf'
@@ -70,12 +88,14 @@ def get_radius(nr_dr, nr_ul, lte_dl, lte_ul):
 
 
 # 팝업 텍스트 생성 함수
+# 팝업 텍스트 생성 함수
 def create_popup_text(row):
     def safe_format(value):
         return f"{round(value, 2):,}" if pd.notnull(value) else 'N/A'
 
     popup_text = (
-        f"<table style='font-size: 11px; width: 100%; max-width: 250px; border: 1px solid black; border-collapse: collapse; margin: 0; padding: 0;'>"
+        f"<div style='overflow: hidden;'>"  # overflow: hidden 추가
+        f"<table style='font-size: 11px; width: 90%; border: 1px solid black; border-collapse: collapse; margin: 0; padding: 0;'>"
         f"<tr style='background-color: #f2f2f2;'><th style='border: 1px solid black; padding: 1px;'>구분</th><th style='border: 1px solid black; padding: 1px;'>항목</th><th style='border: 1px solid black; padding: 1px;'>값</th></tr>"
         f"<tr><td style='border: 1px solid black; padding: 1px;' rowspan='2'>5G</td><td style='border: 1px solid black; padding: 1px;'>DL [GB]</td><td style='border: 1px solid black; padding: 1px;'>{safe_format(row['nr_dr'])}</td></tr>"
         f"<tr><td style='border: 1px solid black; padding: 1px;'>UL [GB]</td><td style='border: 1px solid black; padding: 1px;'>{safe_format(row['nr_ul'])}</td></tr>"
@@ -84,16 +104,23 @@ def create_popup_text(row):
         f"<tr style='background-color: #f2f2f2;'><td style='border: 1px solid black; padding: 1px;' rowspan='2'>소계</td><td style='border: 1px solid black; padding: 1px;'>5G [GB]</td><td style='border: 1px solid black; padding: 1px;'>{safe_format(row['nr_dr'] + row['nr_ul'])}</td></tr>"
         f"<tr style='background-color: #f2f2f2;'><td style='border: 1px solid black; padding: 1px;'>LTE [GB]</td><td style='border: 1px solid black; padding: 1px;'>{safe_format(row['lte_dl'] + row['lte_ul'])}</td></tr>"
         f"</table>"
+        f"</div>"  # div 닫기
     )
     return popup_text
-
 
 # 지도에 마커 추가하는 함수
 def create_marker_with_popup(row):
     popup_text = create_popup_text(row)
     
-    iframe = folium.IFrame(popup_text, width=200)  # 가로 200px 설정, height 생략
-    popup = folium.Popup(iframe, max_width=200, max_height=100)
+    # HTML style 태그를 추가하여 스크롤 제어
+    html_content = f"""
+        <div style="overflow:hidden;">
+            {popup_text}
+        </div>
+    """
+    
+    iframe = folium.IFrame(html_content, width=350, height=200)
+    popup = folium.Popup(iframe, max_width=350)
     marker = folium.CircleMarker(
         location=[row['bld_lat'], row['bld_lon']],
         radius=get_radius(row['nr_dr'], row['nr_ul'], row['lte_dl'], row['lte_ul']),
