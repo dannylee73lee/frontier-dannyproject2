@@ -415,5 +415,3 @@ def run_gpt_style():
 # main 함수 호출
 if __name__ == "__main__":
     run_gpt_style()
-
-
