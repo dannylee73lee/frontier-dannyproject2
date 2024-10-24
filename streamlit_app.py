@@ -334,6 +334,9 @@ def run():
     # 폰트 설정
     configure_font()
 
+    # 메인 화면에 텍스트 추가 (글자 크기 조정)
+    st.markdown("<h3 style='text-align: center; font-size:24px;'>AI기반 밀집Cluster 품질 센싱 및 트래픽 자동분석</h3>", unsafe_allow_html=True)
+
     # 파일 경로
     file_path = 'sample_dna 0901_0930.csv'
     additional_file_path = 'sample_daily 0901_0930.csv'
