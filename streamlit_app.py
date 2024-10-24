@@ -80,6 +80,7 @@ def create_popup_text(row):
     )
     return popup_text
 
+
 # 팝업을 표시할 때 IFrame 크기 조정 (세로 크기를 더욱 줄임)
 def create_marker_with_popup(row):
     popup_text = create_popup_text(row)
