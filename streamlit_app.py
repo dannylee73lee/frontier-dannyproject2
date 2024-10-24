@@ -81,13 +81,13 @@ def create_popup_text(row):
     return popup_text
 
 
-# 팝업을 표시할 때 IFrame 크기 조정 (세로 크기를 더욱 줄임)
+# 팝업을 표시할 때 IFrame 크기를 테이블 크기에 맞게 조정
 def create_marker_with_popup(row):
     popup_text = create_popup_text(row)
     
-    # IFrame의 세로 크기를 더 줄임
-    iframe = folium.IFrame(popup_text, width=240, height=50)  # 세로 크기를 더 줄임
-    popup = folium.Popup(iframe, max_width=240, max_height=50)  # 팝업 최대 크기 설정
+    # IFrame의 높이를 고정하지 않고 팝업 최대 너비만 설정하여 자동으로 조정
+    iframe = folium.IFrame(popup_text, width=200)  # 가로 200px 설정, height 생략
+    popup = folium.Popup(iframe, max_width=200, max_height=100)  # 팝업 최대 크기만 설정하여 테이블 크기에 맞게 조정
     marker = folium.CircleMarker(
         location=[row['bld_lat'], row['bld_lon']],
         radius=get_radius(row['nr_dr'], row['nr_ul'], row['lte_dl'], row['lte_ul']),
@@ -230,15 +230,24 @@ def create_graph(additional_df, selected_dates, cluster_nm):
     
     plt.figure(figsize=(12, 8))
 
+    # 선택한 날짜를 datetime 형식으로 변환
+    selected_dates = pd.to_datetime(selected_dates)
+    
     # 각 aau_nm 별로 그래프를 그림
     for aau_nm in cluster_data['aau_nm'].unique():
         subset = cluster_data[cluster_data['aau_nm'] == aau_nm]
         if subset.empty:
             continue  # 데이터가 없는 경우 건너뛰기
-        plt.plot(subset['dt'], subset['max_peak_dl_prb_1h'], label=aau_nm, linewidth=3)  # 라인 굵기 설정
+        # 동그라미 모양으로 표시 추가
+        plt.plot(subset['dt'], subset['max_peak_dl_prb_1h'], label=aau_nm, linewidth=3, marker='o')  # marker='o'는 동그라미
+
+        # 각 데이터 포인트 중에서 선택한 날짜에 해당하는 데이터만 값 표시
+        for x, y in zip(subset['dt'], subset['max_peak_dl_prb_1h']):
+            if x in selected_dates:
+                plt.text(x, y, f'{y:.2f}', ha='center', va='bottom', fontsize=14, fontweight='bold')  # 폰트 크기 14, 굵게 표시
 
     # 선택한 날짜 범위를 강조
-    if selected_dates:
+    if selected_dates is not None:
         for date in selected_dates:
             if not isinstance(date, pd.Timestamp):
                 date = pd.to_datetime(date)
@@ -273,6 +282,53 @@ def create_graph(additional_df, selected_dates, cluster_nm):
 
     return img_str
 
+
+# 상위 Top 5 데이터를 표시하는 함수
+def display_top5_data(df, selected_dates, selected_clusters):
+    # 선택한 날짜와 클러스터로 데이터 필터링
+    filtered_df = df[df['dt'].isin(pd.to_datetime(selected_dates)) & df['cluster'].isin(selected_clusters)].copy()
+
+    # 5G 데이터 피벗 테이블 생성
+    pivot_5g = pd.pivot_table(filtered_df, index='nr_cell_nm', values=['nr_dr', 'nr_ul'], aggfunc='sum')
+
+    # LTE 데이터 피벗 테이블 생성
+    pivot_lte = pd.pivot_table(filtered_df, index='lte_cell_nm', values=['lte_dl', 'lte_ul'], aggfunc='sum')
+
+    # 5G에서 상위 5개 데이터 추출 (다운로드와 업로드의 합계 기준)
+    pivot_5g['total_traffic'] = pivot_5g['nr_dr'] + pivot_5g['nr_ul']
+    top_5g = pivot_5g.nlargest(5, 'total_traffic').drop(columns='total_traffic')
+
+    # 소수점 첫째 자리까지만 표시
+    top_5g = top_5g.round(1)
+
+    # 5G 테이블 열 이름 변경
+    top_5g = top_5g.rename(columns={'nr_dr': '5G DL[GB]', 'nr_ul': '5G UL[GB]'})
+    top_5g.index.name = '셀 이름'  # 인덱스명을 '셀 이름'으로 변경
+
+    # LTE에서 상위 5개 데이터 추출 (다운로드와 업로드의 합계 기준)
+    pivot_lte['total_traffic'] = pivot_lte['lte_dl'] + pivot_lte['lte_ul']
+    top_lte = pivot_lte.nlargest(5, 'total_traffic').drop(columns='total_traffic')
+
+    # 소수점 첫째 자리까지만 표시
+    top_lte = top_lte.round(1)
+
+    # LTE 테이블 열 이름 변경
+    top_lte = top_lte.rename(columns={'lte_dl': 'LTE DL[GB]', 'lte_ul': 'LTE UL[GB]'})
+    top_lte.index.name = '셀 이름'  # 인덱스명을 '셀 이름'으로 변경
+
+    # 두 개의 열을 나란히 표시
+    col1, col2 = st.columns(2)
+
+    with col1:
+        # subheader 글자 크기를 줄여서 표시
+        st.markdown("<h4 style='font-size:16px;'>Top 5 5G 데이터</h4>", unsafe_allow_html=True)
+        st.dataframe(top_5g)
+
+    with col2:
+        # subheader 글자 크기를 줄여서 표시
+        st.markdown("<h4 style='font-size:16px;'>Top 5 LTE 데이터</h4>", unsafe_allow_html=True)
+        st.dataframe(top_lte)
+
 # 수정된 run 함수
 def run():
     # 폰트 설정
@@ -293,7 +349,10 @@ def run():
     selected_clusters = st.multiselect('클러스터 선택:', sorted(df['cluster'].unique()))
 
     if selected_dates and selected_clusters:
-        # create_map 호출 시 df_additional 추가 전달
+        # 상위 5개 데이터를 표시
+        display_top5_data(df, selected_dates, selected_clusters)
+
+        # 지도 생성 및 그래프 그리기
         create_map(df, selected_dates, selected_clusters, additional_df)
 
         for cluster in selected_clusters:
@@ -303,6 +362,5 @@ def run():
 # main 함수 호출 부분은 동일
 if __name__ == "__main__":
     run()
-
 
 
